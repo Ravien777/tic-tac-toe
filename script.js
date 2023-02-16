@@ -1,110 +1,202 @@
-// The gameboard represented as a 2D array
-const gameboard = [
-  [null, null, null],
-  [null, null, null],
-  [null, null, null],
-];
+"use strict";
 
-// The current player
-let currentPlayer = "X";
+function Gameboard() {
+  const rows = 3;
+  const columns = 3;
+  const board = [];
 
-// Function to render the contents of the gameboard to the webpage
-function render() {
-  let html = "";
-
-  for (let row = 0; row < gameboard.length; row++) {
-    html += "<tr>";
-
-    for (let col = 0; col < gameboard[row].length; col++) {
-      html += `<td id="${row}-${col}" onclick="markSpot(${row}, ${col})">`;
-      html += gameboard[row][col] || "";
-      html += "</td>";
-    }
-
-    html += "</tr>";
-  }
-
-  document.getElementById("gameboard").innerHTML = html;
-}
-
-// Function to allow players to add marks to a specific spot on the gameboard
-function markSpot(row, col) {
-  if (gameboard[row][col]) {
-    return;
-  }
-
-  gameboard[row][col] = currentPlayer;
-
-  if (currentPlayer === "X") {
-    currentPlayer = "O";
-  } else {
-    currentPlayer = "X";
-  }
-
-  console.log(checkForEndOfGame(gameboard));
-
-  render();
-}
-
-function checkForEndOfGame(gameboard) {
-  // Check for a row of 3 matching marks
-  for (let i = 0; i < gameboard.length; i++) {
-    let row = gameboard[i];
-    if (
-      row[0] === row[1] &&
-      row[1] === row[2] &&
-      row[0] !== "" &&
-      row[0] !== null
-    ) {
-      return `Player ${row[0]} won!`;
+  for (let i = 0; i < rows; i++) {
+    board[i] = [];
+    for (let j = 0; j < columns; j++) {
+      board[i].push(Cell());
     }
   }
 
-  // Check for a column of 3 matching marks
-  for (let i = 0; i < gameboard.length; i++) {
-    if (
-      gameboard[0][i] === gameboard[1][i] &&
-      gameboard[1][i] === gameboard[2][i] &&
-      gameboard[0][i] !== "" &&
-      gameboard[0][i] !== null
-    ) {
-      return `Player ${gameboard[0][i]} won!`;
-    }
-  }
+  const getBoard = () => board;
 
-  // Check for a diagonal of 3 matching marks
-  if (
-    gameboard[0][0] === gameboard[1][1] &&
-    gameboard[1][1] === gameboard[2][2] &&
-    gameboard[0][0] !== "" &&
-    gameboard[0][0] !== null
-  ) {
-    return `Player ${gameboard[0][0]} won!`;
-  }
-  if (
-    gameboard[0][2] === gameboard[1][1] &&
-    gameboard[1][1] === gameboard[2][0] &&
-    gameboard[0][2] !== "" &&
-    gameboard[0][2] !== null
-  ) {
-    return `Player ${gameboard[0][2]} won!`;
-  }
+  const dropMarker = (cell, marker) => {
+    let splitCoordinates = cell.split("-");
+    let r = splitCoordinates[0],
+      c = splitCoordinates[1];
 
-  // Check for a tie
-  let gameboardIsFull = true;
-  for (let i = 0; i < gameboard.length; i++) {
-    for (let j = 0; j < gameboard[i].length; j++) {
-      if (gameboard[i][j] === "" || gameboard[i][j] === null) {
-        gameboardIsFull = false;
+    board[r][c].addmarker(marker);
+  };
+
+  const checkForEndGame = () => {
+    for (let i = 0; i < board.length; i++) {
+      let row = board[i];
+      if (
+        row[0].getValue() === row[1].getValue() &&
+        row[1].getValue() === row[2].getValue() &&
+        row[0].getValue() !== "" &&
+        row[0].getValue() !== null
+      ) {
+        return 1;
       }
     }
-  }
-  if (gameboardIsFull) {
-    return "The game is a tie!";
-  }
 
-  // The game is not over yet
-  return false;
+    // Check for a column of 3 matching marks
+    for (let i = 0; i < board.length; i++) {
+      if (
+        board[0][i].getValue() === board[1][i].getValue() &&
+        board[1][i].getValue() === board[2][i].getValue() &&
+        board[0][i].getValue() !== "" &&
+        board[0][i].getValue() !== null
+      ) {
+        return 1;
+      }
+    }
+
+    // Check for a diagonal of 3 matching marks
+    if (
+      board[0][0].getValue() === board[1][1].getValue() &&
+      board[1][1].getValue() === board[2][2].getValue() &&
+      board[0][0].getValue() !== "" &&
+      board[0][0].getValue() !== null
+    ) {
+      return 1;
+    }
+    if (
+      board[0][2].getValue() === board[1][1].getValue() &&
+      board[1][1].getValue() === board[2][0].getValue() &&
+      board[0][2].getValue() !== "" &&
+      board[0][2].getValue() !== null
+    ) {
+      return 1;
+    }
+
+    let finished = true;
+    board.forEach((row) => {
+      row.forEach((col) => {
+        if (col.getValue() === "" || col.getValue() === null) {
+          finished = false;
+        }
+      });
+    });
+
+    if (finished) {
+      return 0;
+    }
+    return -1;
+  };
+
+  return { getBoard, dropMarker, checkForEndGame };
 }
 
-render();
+function Cell() {
+  let value = "";
+
+  const addmarker = (marker) => {
+    value = marker;
+  };
+
+  const getValue = () => value;
+
+  return {
+    addmarker,
+    getValue,
+  };
+}
+
+function GameController(playerOne = "Player One", playerTwo = "Player Two") {
+  const board = Gameboard();
+  const modal = document.querySelector(".modal");
+  const overlay = document.querySelector(".overlay");
+  const msg = document.createElement("p");
+
+  const players = [
+    {
+      name: playerOne,
+      marker: "X",
+    },
+    {
+      name: playerTwo,
+      marker: "O",
+    },
+  ];
+
+  let activePlayer = players[0];
+
+  const switchPlayerTurn = () => {
+    activePlayer = activePlayer === players[0] ? players[1] : players[0];
+  };
+  const getActivePlayer = () => activePlayer;
+
+  const modalOpen = () => {
+    modal.classList.add("active");
+    overlay.classList.add("active");
+  };
+
+  const modalClose = () => {
+    modal.classList.remove("active");
+    overlay.classList.remove("active");
+  };
+
+  modal.appendChild(msg);
+
+  const playRound = (column) => {
+    board.dropMarker(column, getActivePlayer().marker);
+
+    if (board.checkForEndGame() === 0) {
+      msg.innerText = "It's a draw!";
+      modalOpen();
+    } else if (board.checkForEndGame() === 1) {
+      msg.innerText = getActivePlayer().name + " won!";
+      modalOpen();
+    } else {
+      switchPlayerTurn();
+    }
+  };
+
+  return {
+    playRound,
+    getActivePlayer,
+    getBoard: board.getBoard,
+  };
+}
+
+function ScreenController() {
+  const game = GameController();
+  const playerTurnDiv = document.querySelector(".turn");
+  const boardDiv = document.getElementById("gameboard");
+
+  const updateScreen = () => {
+    // clear the board
+    boardDiv.textContent = "";
+
+    // get the newest version of the board and player turn
+    const board = game.getBoard();
+    const activePlayer = game.getActivePlayer();
+
+    // Display player's turn
+    playerTurnDiv.textContent = `${activePlayer.name}'s turn...`;
+
+    // Render board squares
+    board.forEach((row, rowIndex) => {
+      row.forEach((cell, cellIndex) => {
+        const cellButton = document.createElement("button");
+        cellButton.classList.add("cell");
+        cellButton.dataset.column = `${rowIndex}-${cellIndex}`;
+        cellButton.textContent = cell.getValue();
+        boardDiv.appendChild(cellButton);
+      });
+    });
+  };
+
+  // Add event listener for the board
+  function clickHandlerBoard(e) {
+    const selectedColumn = e.target.dataset.column;
+    if (!selectedColumn) return;
+
+    if (e.target.innerText !== "") return;
+
+    game.playRound(selectedColumn);
+    updateScreen();
+  }
+  boardDiv.addEventListener("click", clickHandlerBoard);
+
+  // Initial render
+  updateScreen();
+}
+
+ScreenController();
